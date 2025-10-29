@@ -20,13 +20,21 @@ export default function EditorView() {
   const [lastSaved, setLastSaved] = useState(null);
 
   // WebSocket for real-time collaboration
-  const { isConnected, remoteUsers, sendUpdate } = useWebSocket(
+  const { isConnected, remoteUsers, sendUpdate, sendPresence, sendCursor } = useWebSocket(
     currentPage?.id,
     currentUser,
     (message) => {
-      if (message.type === 'update') {
-        // Handle updates from other users
-        console.log('Received update from:', message.clientId);
+      // Handle realtime messages
+      if (message.type === 'update' && message.changes?.content != null) {
+        // Apply incoming content from other users
+        setContent((prev) => {
+          const next = message.changes.content;
+          return next !== prev ? next : prev;
+        });
+        setHasUnsavedChanges(false);
+      }
+      if (message.type === 'cursor' && message.position) {
+        // Presence/cursor list maintained by hook -> remoteUsers, so UI updates
       }
     }
   );
@@ -161,6 +169,16 @@ export default function EditorView() {
               onChange={handleContentChange}
               editable={currentUser?.role !== 'Viewer'}
               collaborators={remoteUsers}
+              onPresence={(isTyping) => {
+                if (isConnected && currentPage) {
+                  sendPresence(isTyping);
+                }
+              }}
+              onCursor={(position) => {
+                if (isConnected && currentPage) {
+                  sendCursor(position);
+                }
+              }}
             />
           </div>
         </ScrollArea>

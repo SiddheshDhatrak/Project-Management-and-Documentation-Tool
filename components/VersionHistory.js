@@ -13,8 +13,10 @@ export default function VersionHistory({ pageId, currentContent, onClose }) {
   const [selectedVersion, setSelectedVersion] = useState(null);
 
   useEffect(() => {
-    const pageVersions = getVersions(pageId);
-    setVersions(pageVersions);
+    (async () => {
+      const pageVersions = await getVersions(pageId);
+      setVersions(pageVersions);
+    })();
   }, [pageId, getVersions]);
 
   const handleRestore = (versionId) => {

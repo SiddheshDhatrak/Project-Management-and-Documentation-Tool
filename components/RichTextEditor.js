@@ -33,12 +33,15 @@ import {
   Highlighter,
 } from 'lucide-react';
 import './RichTextEditor.css';
+import RemoteCursors from '@/lib/extensions/RemoteCursors';
 
 export default function RichTextEditor({
   content,
   onChange,
   editable = true,
   collaborators = [],
+  onPresence,
+  onCursor,
 }) {
   const editor = useEditor({
     extensions: [
@@ -47,6 +50,7 @@ export default function RichTextEditor({
           depth: 100,
         },
       }),
+      RemoteCursors,
       Placeholder.configure({
         placeholder: 'Start typing your content here...',
       }),
@@ -76,6 +80,8 @@ export default function RichTextEditor({
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       onChange?.(html);
+      // Notify presence (typing)
+      onPresence?.(true);
     },
     editorProps: {
       attributes: {
@@ -97,9 +103,55 @@ export default function RichTextEditor({
     }
   }, [editable, editor]);
 
+  // Selection/cursor updates
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleSelection = () => {
+      try {
+        const { from, to } = editor.state.selection;
+        onCursor?.({ from, to });
+      } catch {}
+    };
+
+    const handleIdle = () => onPresence?.(false);
+
+    editor.on('selectionUpdate', handleSelection);
+    editor.on('transaction', handleSelection);
+
+    let idleTimer;
+    const handleTyping = () => {
+      onPresence?.(true);
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(handleIdle, 900);
+    };
+
+    editor.on('update', handleTyping);
+
+    return () => {
+      editor.off('selectionUpdate', handleSelection);
+      editor.off('transaction', handleSelection);
+      editor.off('update', handleTyping);
+      if (idleTimer) clearTimeout(idleTimer);
+    };
+  }, [editor, onCursor, onPresence]);
+
   if (!editor) {
     return null;
   }
+
+  // Push remote cursors to extension on change
+  useEffect(() => {
+    if (!editor) return;
+    const cursors = (collaborators || []).map((u) => ({
+      from: u.selection?.from ?? u.position?.from ?? u.position?.pos ?? 0,
+      to: u.selection?.to ?? u.position?.to ?? u.position?.pos ?? 0,
+      color: u.color,
+      name: u.name,
+      clientId: u.clientId || u.id,
+    }));
+    editor.commands.updateCursors(cursors);
+  }, [editor, collaborators]);
 
   const addLink = () => {
     const url = window.prompt('Enter URL:');

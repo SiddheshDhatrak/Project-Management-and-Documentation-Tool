@@ -1,8 +1,8 @@
-import './globals.css'
+import './global.css'
 
 export const metadata = {
-  title: 'Next.js MongoDB Template',
-  description: 'A simple template with App Router, MongoDB, and shadcn/ui',
+  title: 'Project Management & Documentation Tool',
+  description: 'Confluence-style editor with Jira-style Kanban boards for collaborative project management',
 }
 
 export default function RootLayout({ children }) {

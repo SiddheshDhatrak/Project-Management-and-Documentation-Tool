@@ -56,7 +56,23 @@ export const useWebSocket = (roomId, user, onMessage) => {
             case 'user_left':
               setRemoteUsers(prev => prev.filter(u => u.clientId !== message.clientId));
               break;
+            case 'presence': {
+              const { clientId, isTyping, selection, user } = message
+              setRemoteUsers(prev => prev.map(u => u.clientId === clientId ? { ...u, isTyping, selection, ...user } : u))
+              break;
+            }
+            case 'cursor': {
+              const { clientId, position, user } = message
+              setRemoteUsers(prev => prev.map(u => u.clientId === clientId ? { ...u, position, ...user } : u))
+              break;
+            }
             
+            case 'presence':
+              // presence updates are handled by the UI as needed
+              break;
+            case 'cursor':
+              // cursor updates are handled by the UI as needed
+              break;
             default:
               if (onMessage) {
                 onMessage(message);
